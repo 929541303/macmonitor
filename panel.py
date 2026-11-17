@@ -572,7 +572,7 @@ class Panel:
 
         center(H - 100, 22, "MacMonitor", TXT, 17, 0.6)
         center(H - 120, 16, "v" + VERSION, DIM, 11)
-        center(H - 148, 30, "进程 / GPU / 网络监控 · 风扇三模式控温\n数据仅在本地，不上传", DIM, 11)
+        center(H - 148, 30, "设备监控 · 风扇自动控温\n仅支持 Intel 机型 · M 系列适配开发中", DIM, 11)
 
         # 打赏卡片（缓存=GitHub 最新版，捆绑图为兜底）
         qr = QR_CACHE if QR_CACHE.exists() else (server.ROOT / "donate" / "wechat-qr.png")

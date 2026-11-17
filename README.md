@@ -1,8 +1,12 @@
 # MacMonitor 🌀
 
-一款 macOS 菜单栏资源监控 + 风扇控制工具。**单进程、原生界面、轻量**：面板常驻 CPU 仅 ~4%。
+**macOS 设备监控 + 风扇自动控温工具**：实时监控 CPU / 内存 / GPU / 网络 / 全部进程，风扇支持恒定转速与传感器联动自动控温。单进程原生界面，常驻 CPU 仅 ~4%。
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Intel](https://img.shields.io/badge/Intel-tested-green) ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-Rosetta%20运行-yellow)
+> ⚠️ **当前仅完整支持 Intel 机型（老款 Mac）**；Apple Silicon（M 系列）适配开发中，后续跟进。
+
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Intel](https://img.shields.io/badge/Intel-完整支持-green) ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-开发中-orange) ![CPU](https://img.shields.io/badge/面板CPU-~4%25-9cf)
+
+**搜索关键词**：`mac 监控` `mac 风扇控制` `Mac Monitor` `Fan Control` `macos 系统监控` `温度监控` `进程管理` `菜单栏工具` `activity monitor` `cpu gpu 内存`
 
 ## 功能
 
