@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>资源监控</title>
+<title>MacMonitor</title>
 <style>
 :root{--bg:#101218;--card:#171a21;--line:#242936;--txt:#dfe3ea;--dim:#8791a3;--acc:#4f8cff;--ok:#41c46f;--warn:#e6a23c;--dan:#e35d5d}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{background:var(--bg);color:var(--txt);font:11.5px/1.35 -apple-system,"PingFang SC",sans-serif;display:flex;flex-direction:column;overflow:hidden}
-/* 风扇：一个块，左右转速+共用策略 */
+body{background:var(--bg);color:var(--txt);font:11.5px/1.35 -apple-system,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+/* Fan：一个块，LR转速+共用策略 */
 #fancard{margin:6px 8px 0;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 8px}
 .frow{display:flex;align-items:center;gap:6px;padding:2px 0;flex-wrap:nowrap}
 .frow .nm{color:var(--dim);font-size:10px}
@@ -66,19 +66,19 @@ tr.detail b{color:var(--txt)}
 </head>
 <body>
 <div id="fancard"></div>
-<div class="line" id="templine">温度加载中…</div>
-<div class="line" id="infoline">加载中…</div>
-<div class="tools"><input id="q" placeholder="搜索进程…"><span class="n" id="pcount"></span><button id="aboutBtn" style="padding:1px 9px" title="关于">ⓘ</button></div>
+<div class="line" id="templine">Loading temps…</div>
+<div class="line" id="infoline">Loading…</div>
+<div class="tools"><input id="q" placeholder="Search processes…"><span class="n" id="pcount"></span><button id="aboutBtn" style="padding:1px 9px" title="About">ⓘ</button></div>
 <div id="aboutBox" hidden style="margin:0 8px 6px;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:8px 12px;font-size:11px;line-height:1.7;color:var(--dim)">
   <b style="color:var(--txt);font-size:13px">MacMonitor & Fans Control</b> <span style="float:right" id="verTag"></span><br>
-  实时监控 CPU、内存、GPU、网络与全部进程，支持按任意指标排序并一键结束进程；风扇支持自动 / 恒定转速 / 传感器联动三种模式。数据仅本地采集，不上传。<br>
-  <span style="color:var(--dim)">v1.1.0 棒棒糖图标；About 完善　　v1.0.0 首版</span>
+  Real-time CPU / memory / GPU / network and per-process monitoring — sortable, searchable, one-click quit. Fan modes: Auto / Constant RPM / Sensor-linked. All data stays local, nothing uploaded.<br>
+  <span style="color:var(--dim)">v1.3.0 English UI · global release　　v1.0.0 first release</span>
 </div>
 <div class="tblwrap">
   <table>
     <thead><tr>
-      <th data-k="pid">PID</th><th data-k="name">进程</th><th data-k="cpu">CPU%</th>
-      <th data-k="gpu">GPU%</th><th data-k="net">网络</th><th data-k="mem">内存</th><th data-k="threads">线程</th><th>·</th>
+      <th data-k="pid">PID</th><th data-k="name">Process</th><th data-k="cpu">CPU%</th>
+      <th data-k="gpu">GPU%</th><th data-k="net">Net</th><th data-k="mem">Mem</th><th data-k="threads">Threads</th><th>·</th>
     </tr></thead>
     <tbody id="rows"></tbody>
   </table>
@@ -102,7 +102,7 @@ document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
 $('#q').oninput=render;
 document.getElementById('aboutBtn').onclick=()=>{const b=document.getElementById('aboutBox');b.hidden=!b.hidden;};
 
-/* ---- 风扇：左右转速共用一套策略 ---- */
+/* ---- Fan：LR转速共用一套策略 ---- */
 let fanBuilt=false,dragTimer=null,cfgLock=null,range=[2000,6000];
 function modeOf(fs){
   if(fs.some(f=>f.policy&&f.policy.mode==='sensor'))return 'sensor';
@@ -113,12 +113,12 @@ function buildFans(fs){
   range=[Math.min(...fs.map(f=>f.min)),Math.max(...fs.map(f=>f.max))];
   $('#fancard').innerHTML=`
   <div class="frow">
-    <span class="nm">左</span><span class="rpm" id="rpmL">–</span>
-    <span class="nm">右</span><span class="rpm" id="rpmR">–</span>
+    <span class="nm">L</span><span class="rpm" id="rpmL">–</span>
+    <span class="nm">R</span><span class="rpm" id="rpmR">–</span>
     <select id="modeSel" onchange="onMode(this.value)">
-      <option value="auto">自动</option><option value="manual">恒定</option><option value="sensor">联动</option>
+      <option value="auto">Auto</option><option value="manual">Constant</option><option value="sensor">Sensor</option>
     </select>
-    <span class="st" id="st">自动</span>
+    <span class="st" id="st">Auto</span>
     <span class="mcfg" id="rc-manual" hidden>
       <input type="range" min="${range[0]}" max="${range[1]}" step="50" id="fr" oninput="onDrag()" onchange="fanSet('manual',this.value)">
       <span class="v" id="fv"></span>
@@ -169,7 +169,7 @@ function applyFans(fs){
   const sp=(fs.find(f=>f.policy&&f.policy.mode==='sensor')||{}).policy;
   const st=$('#st');
   const avg=Math.round(fs.reduce((a,f)=>a+f.rpm,0)/fs.length);
-  st.textContent=m==='auto'?'自动':m==='sensor'?`${sp.sensor}≤${sp.target}°C`:`恒定 ${avg}`;
+  st.textContent=m==='auto'?'Auto':m==='sensor'?`${sp.sensor}≤${sp.target}°C`:`Constant ${avg}`;
   st.className='st'+(m==='auto'?'':' m');
   $('#rc-manual').hidden=m!=='manual';
   $('#rc-sensor').hidden=m!=='sensor';
@@ -178,15 +178,15 @@ function applyFans(fs){
   if(m==='sensor')fillOpts();
 }
 async function fanSet(mode,rpm,sensor,target){
-  // 共用策略：同时下发两个风扇
+  // 共用策略：同时下发两个Fan
   const mk=i=>({fan:i,mode,...(mode==='manual'?{rpm:+rpm||+($('#fr')?.value||0)}:{}),
     ...(mode==='sensor'?{sensor:sensor||'TC0P',target:+target||70}:{})});
   const rs=[];
   for(const i of [0,1]){
-    const r=await fetch('/api/fan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mk(i))}).then(r=>r.json()).catch(()=>({ok:false,error:'服务离线'}));
+    const r=await fetch('/api/fan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mk(i))}).then(r=>r.json()).catch(()=>({ok:false,error:'service offline'}));
     rs.push(r);
   }
-  if(rs.some(r=>!r.ok)){alert('设置失败：'+(rs.find(r=>!r.ok).error||''));return}
+  if(rs.some(r=>!r.ok)){alert('Failed: '+(rs.find(r=>!r.ok).error||''));return}
   cfgLock=null;
   const fans=rs[1].fans||rs[0].fans;if(fans)applyFans(fans);
 }
@@ -205,16 +205,16 @@ function render(){
       <td class="${col((p.netIn||0)+(p.netOut||0),10240,204800)}">${netTxt(p)}</td>
       <td>${p.mem}</td><td>${p.threads}</td>
       <td onclick="event.stopPropagation()"><button class="x" onclick="kill(${p.pid},true)">✕</button></td>
-    </tr>${ex?`<tr class="detail"><td colspan="8"><b>${p.name}</b>（${p.pid}）· ${p.status} ｜ CPU <b>${p.cpu}%</b> GPU <b>${p.gpu??0}%</b> 内存 <b>${p.mem}MB</b> 线程 <b>${p.threads}</b><br>网 ↓<b>${fmt(p.netIn||0)}/s</b> ↑<b>${fmt(p.netOut||0)}/s</b>（累计 ↓${fmt(p.bytesIn||0)} ↑${fmt(p.bytesOut||0)}）
-      <span style="float:right"><button onclick="kill(${p.pid},false)">退出</button> <button style="color:var(--dan)" onclick="kill(${p.pid},true)">强杀</button></span></td></tr>`:''}`;
+    </tr>${ex?`<tr class="detail"><td colspan="8"><b>${p.name}</b>(${p.pid}) · ${p.status} | CPU <b>${p.cpu}%</b> GPU <b>${p.gpu??0}%</b> Mem <b>${p.mem}MB</b> Threads <b>${p.threads}</b><br>Net ↓<b>${fmt(p.netIn||0)}/s</b> ↑<b>${fmt(p.netOut||0)}/s</b> (Total ↓${fmt(p.bytesIn||0)} ↑${fmt(p.bytesOut||0)}）
+      <span style="float:right"><button onclick="kill(${p.pid},false)">Quit</button> <button style="color:var(--dan)" onclick="kill(${p.pid},true)">Force kill</button></span></td></tr>`:''}`;
   }).join('');
   $('#pcount').textContent=list.length;
 }
 function detail(pid){expanded=expanded===pid?null:pid;render()}
 async function kill(pid,force){
-  if(!confirm(`${force?'强制结束':'退出'}进程 ${pid}？`))return;
+  if(!confirm(`${force?'Force kill':'Quit'} process ${pid}?`))return;
   const r=await fetch('/api/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid,force})}).then(r=>r.json());
-  if(!r.ok)alert(r.error||'失败');setTimeout(tick,400);
+  if(!r.ok)alert(r.error||'Failed');setTimeout(tick,400);
 }
 /* ---- 刷新：系统行每 2s，进程表每 4s（服务端进程数据本就 5s 一刷） ---- */
 let _ptick=0;
@@ -222,14 +222,14 @@ async function tick(){
   try{data=await fetch('/api/stats').then(r=>r.json())}catch(e){return}
   const s=data.system,g=data.gpus||[];
   const gpuMax=Math.max(0,...g.map(x=>x.util||0));
-  const gp=g.filter(x=>(x.util||0)>0).map(x=>`${x.name=='独显'?'独':x.name=='核显'?'核':x.name.slice(0,2)}${x.util}`).join('·')||'–';
-  $('#infoline').innerHTML=`CPU<b>${s.cpu}%</b><span class="sep">│</span>内存<b>${(s.memUsed/2**30).toFixed(1)}/${s.memTotal/2**30).toFixed(0)}G</b><span class="sep">│</span>GPU<b>${gpuMax}%</b><span class="sep">│</span>显卡<b>${gp}</b><span class="sep">│</span>网络↓<b>${fmt(data.net.down)}/s</b>↑<b>${fmt(data.net.up)}/s</b>`;
+  const gp=g.filter(x=>(x.util||0)>0).map(x=>`${x.name=='dGPU'?'d':x.name=='iGPU'?'i':x.name.slice(0,2)}${x.util}`).join('·')||'–';
+  $('#infoline').innerHTML=`CPU<b>${s.cpu}%</b><span class="sep">│</span>Mem<b>${(s.memUsed/2**30).toFixed(1)}/${s.memTotal/2**30).toFixed(0)}G</b><span class="sep">│</span>GPU<b>${gpuMax}%</b><span class="sep">│</span>GPUs<b>${gp}</b><span class="sep">│</span>Net↓<b>${fmt(data.net.down)}/s</b>↑<b>${fmt(data.net.up)}/s</b>`;
   applyFans(data.fans||[]);
   if(_ptick++%2===0||$('#q').value.trim())render();
 }
 async function tickSensors(){
   try{sensors=(await fetch('/api/sensors').then(r=>r.json())).sensors||[]}catch(e){return}
-  $('#templine').innerHTML=sensors.map(s=>`${s.name.replace(/CPU 附近|附近|主板 1|主板 2|内存条?/g,m=>({'CPU 附近':'CPU','主板 1':'板1','主板 2':'板2','内存':' Mem'}[m]||m))}<b class="${s.value>75?'hot':''}">${s.value}°</b>`).join(' ');
+  $('#templine').innerHTML=sensors.map(s=>`${s.name}<b class="${s.value>75?'hot':''}">${s.value}°</b>`).join(' ');
   const el=$('#fsel');if(el&&!el.options.length)fillOpts();
 }
 tick();setInterval(tick,2000);tickSensors();setInterval(tickSensors,5000);
