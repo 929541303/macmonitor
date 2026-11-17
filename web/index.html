@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>资源监控</title>
+<style>
+:root{--bg:#101218;--card:#171a21;--line:#242936;--txt:#dfe3ea;--dim:#8791a3;--acc:#4f8cff;--ok:#41c46f;--warn:#e6a23c;--dan:#e35d5d}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--txt);font:11.5px/1.35 -apple-system,"PingFang SC",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+/* 风扇：一个块，左右转速+共用策略 */
+#fancard{margin:6px 8px 0;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 8px}
+.frow{display:flex;align-items:center;gap:6px;padding:2px 0;flex-wrap:nowrap}
+.frow .nm{color:var(--dim);font-size:10px}
+.frow .rpm{font-size:15px;font-weight:700;min-width:56px;font-variant-numeric:tabular-nums}
+.frow .rpm small{font-size:9px;color:var(--dim);font-weight:400}
+.frow .st{font-size:10px;color:var(--ok);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+.frow .st.m{color:var(--warn)}
+#modeSel,.frow select,.frow input[type=number]{background:var(--bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:1px 3px;font-size:11px}
+#modeSel{padding:2px 4px}
+.mcfg{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.mcfg[hidden]{display:none}
+.mcfg input[type=range]{flex:1;min-width:50px}
+.mcfg .v{min-width:58px;text-align:right;color:var(--acc);font-weight:600;font-variant-numeric:tabular-nums}
+.mcfg input[type=number]{width:38px;text-align:right}
+button{background:#212633;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:1px 8px;cursor:pointer;font-size:10.5px}
+button:hover{border-color:var(--acc)}button.act{background:#1c2c48;border-color:var(--acc);color:var(--acc)}
+.cfg{display:flex;align-items:center;gap:6px;padding:3px 0 1px;font-size:11px}
+.cfg[hidden]{display:none}
+.cfg input[type=range]{flex:1;min-width:60px}
+.cfg .v{min-width:62px;text-align:right;color:var(--acc);font-weight:600;font-variant-numeric:tabular-nums}
+.cfg select,.cfg input[type=number]{background:var(--bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:1px 4px;font-size:11px}
+.cfg input[type=number]{width:42px;text-align:right}
+.go{color:var(--ok);border-color:#2c4d3b}
+/* 两行信息 */
+.line{display:flex;align-items:center;gap:4px;padding:4px 9px 0;font-variant-numeric:tabular-nums;color:var(--dim);font-size:11px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+.line b{color:var(--txt);font-weight:600}
+.line .hot{color:var(--dan)}
+.line .sep{color:#333a49}
+/* 工具行 */
+.tools{display:flex;gap:6px;padding:3px 8px 4px;align-items:center}
+.tools input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:5px;color:var(--txt);padding:3px 8px;outline:none;font-size:11px}
+.tools .n{color:var(--dim);font-size:10px}
+/* 表 */
+.tblwrap{flex:1;overflow:auto;border-top:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th:nth-child(1),td:nth-child(1){width:42px}
+th:nth-child(3),td:nth-child(3){width:44px}
+th:nth-child(4),td:nth-child(4){width:44px}
+th:nth-child(5),td:nth-child(5){width:74px}
+th:nth-child(6),td:nth-child(6){width:50px}
+th:nth-child(7),td:nth-child(7){width:38px}
+th:nth-child(8),td:nth-child(8){width:20px}
+th{position:sticky;top:0;background:var(--card);color:var(--dim);font-weight:500;text-align:right;padding:3px 7px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;white-space:nowrap;z-index:2}
+th:nth-child(2){text-align:left;width:auto}
+th.on{color:var(--acc)}th.on::after{content:"▾"}th.on.asc::after{content:"▴"}
+td{padding:2.5px 7px;text-align:right;border-bottom:1px solid #191e27;font-variant-numeric:tabular-nums;white-space:nowrap}
+td:nth-child(2){text-align:left;overflow:hidden;text-overflow:ellipsis}
+tr:hover td{background:#1a1f2a}
+tr.detail td{text-align:left;white-space:normal;color:var(--dim);padding:6px 10px;line-height:1.6;background:#151924}
+tr.detail b{color:var(--txt)}
+.x{background:none;border:none;color:#5a6373;font-size:12px;padding:0 3px;cursor:pointer}
+.x:hover{color:var(--dan);border:none}
+.hi-c{color:var(--warn)}.hi-d{color:var(--dan)}
+</style>
+</head>
+<body>
+<div id="fancard"></div>
+<div class="line" id="templine">温度加载中…</div>
+<div class="line" id="infoline">加载中…</div>
+<div class="tools"><input id="q" placeholder="搜索进程…"><span class="n" id="pcount"></span><button id="aboutBtn" style="padding:1px 9px" title="关于">ⓘ</button></div>
+<div id="aboutBox" hidden style="margin:0 8px 6px;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:8px 12px;font-size:11px;line-height:1.7;color:var(--dim)">
+  <b style="color:var(--txt);font-size:13px">MacMonitor & Fans Control</b> <span style="float:right" id="verTag"></span><br>
+  实时监控 CPU、内存、GPU、网络与全部进程，支持按任意指标排序并一键结束进程；风扇支持自动 / 恒定转速 / 传感器联动三种模式。数据仅本地采集，不上传。<br>
+  <span style="color:var(--dim)">v1.1.0 棒棒糖图标；About 完善　　v1.0.0 首版</span>
+</div>
+<div class="tblwrap">
+  <table>
+    <thead><tr>
+      <th data-k="pid">PID</th><th data-k="name">进程</th><th data-k="cpu">CPU%</th>
+      <th data-k="gpu">GPU%</th><th data-k="net">网络</th><th data-k="mem">内存</th><th data-k="threads">线程</th><th>·</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+<script>
+let data=null,sortK='cpu',asc=false,expanded=null,sensors=[];
+const $=s=>document.querySelector(s);
+const fmt=b=>{
+  if(b<128) return Math.round(b*8)+'b';           // <1KB 用 bit
+  if(b<1048576) return (b/1024).toFixed(b<10240?1:0)+'K';  // <10K 保留1位
+  if(b<1073741824) return (b/1048576).toFixed(1)+'M';
+  return (b/1073741824).toFixed(2)+'G';
+};
+const col=(v,w1,w2)=>v>w1?'hi-c':v>w2?'hi-d':'';
+const netTxt=p=>{const i=p.netIn||0,o=p.netOut||0;if(!i&&!o)return'–';return `↓${fmt(i)} ↑${fmt(o)}`};
+document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k;if(sortK===k)asc=!asc;else{sortK=k;asc=(k==='name')}
+  document.querySelectorAll('th').forEach(t=>t.classList.remove('on','asc'));
+  th.classList.add('on');if(asc)th.classList.add('asc');render();
+});
+$('#q').oninput=render;
+document.getElementById('aboutBtn').onclick=()=>{const b=document.getElementById('aboutBox');b.hidden=!b.hidden;};
+
+/* ---- 风扇：左右转速共用一套策略 ---- */
+let fanBuilt=false,dragTimer=null,cfgLock=null,range=[2000,6000];
+function modeOf(fs){
+  if(fs.some(f=>f.policy&&f.policy.mode==='sensor'))return 'sensor';
+  if(fs.some(f=>f.manual))return 'manual';
+  return 'auto';
+}
+function buildFans(fs){
+  range=[Math.min(...fs.map(f=>f.min)),Math.max(...fs.map(f=>f.max))];
+  $('#fancard').innerHTML=`
+  <div class="frow">
+    <span class="nm">左</span><span class="rpm" id="rpmL">–</span>
+    <span class="nm">右</span><span class="rpm" id="rpmR">–</span>
+    <select id="modeSel" onchange="onMode(this.value)">
+      <option value="auto">自动</option><option value="manual">恒定</option><option value="sensor">联动</option>
+    </select>
+    <span class="st" id="st">自动</span>
+    <span class="mcfg" id="rc-manual" hidden>
+      <input type="range" min="${range[0]}" max="${range[1]}" step="50" id="fr" oninput="onDrag()" onchange="fanSet('manual',this.value)">
+      <span class="v" id="fv"></span>
+    </span>
+    <span class="mcfg" id="rc-sensor" hidden>
+      <select id="fsel" onchange="fanSet('sensor',null,this.value,$('#ftgt').value)"></select>≤
+      <input type="number" id="ftgt" value="70" min="45" max="90" onchange="fanSet('sensor',null,$('#fsel').value,this.value)">°
+    </span>
+  </div>`;
+  fanBuilt=true;fillOpts();
+}
+function onMode(v){
+  if(v==='auto')fanSet('auto');
+  else if(v==='manual')pickManual();
+  else pickSensor();
+}
+function onDrag(){
+  $('#fv').textContent=$('#fr').value+' RPM';
+  clearTimeout(dragTimer);dragTimer=setTimeout(()=>fanSet('manual',$('#fr').value),450);
+}
+function pickManual(){
+  const cur=Math.round((data?.fans||[]).reduce((a,f)=>a+f.rpm,0)/Math.max(1,(data?.fans||[]).length))||2500;
+  $('#fr').value=cur;$('#fv').textContent=cur+' RPM';
+  $('#rc-manual').hidden=false;$('#rc-sensor').hidden=true;$('#st').hidden=true;
+  fanSet('manual',cur);
+}
+function pickSensor(){
+  fillOpts();
+  $('#rc-sensor').hidden=false;$('#rc-manual').hidden=true;$('#st').hidden=true;
+  fanSet('sensor',null,$('#fsel').value,$('#ftgt').value);
+}
+function setAct(m){['auto','manual','sensor'].forEach(md=>$('#m-'+md).classList.toggle('act',md===m))}
+function fillOpts(){
+  const el=$('#fsel');if(!el||el.options.length)return;
+  el.innerHTML=sensors.map(s=>`<option value="${s.key}">${s.name}</option>`).join('');
+  const p=(data?.fans||[]).find(f=>f.policy&&f.policy.sensor);
+  if(p)el.value=p.policy.sensor;
+}
+function applyFans(fs){
+  if(!fs||!fs.length)return;
+  if(!fanBuilt)buildFans(fs);
+  const L=$('#rpmL');if(!L)return;
+  L.innerHTML=Math.round(fs[0].rpm)+'<small> RPM</small>';
+  if(fs[1])$('#rpmR').innerHTML=Math.round(fs[1].rpm)+'<small> RPM</small>';
+  if(cfgLock){if(Date.now()-cfgLock.t>3000)cfgLock=null;else return}
+  const m=modeOf(fs);
+  $('#modeSel').value=m;
+  const sp=(fs.find(f=>f.policy&&f.policy.mode==='sensor')||{}).policy;
+  const st=$('#st');
+  const avg=Math.round(fs.reduce((a,f)=>a+f.rpm,0)/fs.length);
+  st.textContent=m==='auto'?'自动':m==='sensor'?`${sp.sensor}≤${sp.target}°C`:`恒定 ${avg}`;
+  st.className='st'+(m==='auto'?'':' m');
+  $('#rc-manual').hidden=m!=='manual';
+  $('#rc-sensor').hidden=m!=='sensor';
+  $('#st').hidden=m==='auto'?false:true;
+  if(m==='manual'){const fr=$('#fr');if(fr&&document.activeElement!==fr){fr.value=avg;$('#fv').textContent=avg+' RPM';}}
+  if(m==='sensor')fillOpts();
+}
+async function fanSet(mode,rpm,sensor,target){
+  // 共用策略：同时下发两个风扇
+  const mk=i=>({fan:i,mode,...(mode==='manual'?{rpm:+rpm||+($('#fr')?.value||0)}:{}),
+    ...(mode==='sensor'?{sensor:sensor||'TC0P',target:+target||70}:{})});
+  const rs=[];
+  for(const i of [0,1]){
+    const r=await fetch('/api/fan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mk(i))}).then(r=>r.json()).catch(()=>({ok:false,error:'服务离线'}));
+    rs.push(r);
+  }
+  if(rs.some(r=>!r.ok)){alert('设置失败：'+(rs.find(r=>!r.ok).error||''));return}
+  cfgLock=null;
+  const fans=rs[1].fans||rs[0].fans;if(fans)applyFans(fans);
+}
+/* ---- 表 ---- */
+function render(){
+  const q=$('#q').value.trim().toLowerCase();
+  let list=(data?.processes||[]).filter(p=>!q||p.name.toLowerCase().includes(q)||String(p.pid).includes(q));
+  list.forEach(p=>{p.net=(p.netIn||0)+(p.netOut||0)});
+  list.sort((a,b)=>{const x=a[sortK],y=b[sortK];return(typeof x==='string'?x.localeCompare(y):x-y)*(asc?1:-1)});
+  $('#rows').innerHTML=list.slice(0,150).map(p=>{
+    const ex=expanded===p.pid;
+    return `<tr data-pid="${p.pid}" onclick="detail(${p.pid})">
+      <td>${p.pid}</td><td title="${p.name}">${p.name}</td>
+      <td class="${col(p.cpu,30,80)}">${p.cpu}</td>
+      <td class="${col(p.gpu||0,15,50)}">${p.gpu??0}</td>
+      <td class="${col((p.netIn||0)+(p.netOut||0),10240,204800)}">${netTxt(p)}</td>
+      <td>${p.mem}</td><td>${p.threads}</td>
+      <td onclick="event.stopPropagation()"><button class="x" onclick="kill(${p.pid},true)">✕</button></td>
+    </tr>${ex?`<tr class="detail"><td colspan="8"><b>${p.name}</b>（${p.pid}）· ${p.status} ｜ CPU <b>${p.cpu}%</b> GPU <b>${p.gpu??0}%</b> 内存 <b>${p.mem}MB</b> 线程 <b>${p.threads}</b><br>网 ↓<b>${fmt(p.netIn||0)}/s</b> ↑<b>${fmt(p.netOut||0)}/s</b>（累计 ↓${fmt(p.bytesIn||0)} ↑${fmt(p.bytesOut||0)}）
+      <span style="float:right"><button onclick="kill(${p.pid},false)">退出</button> <button style="color:var(--dan)" onclick="kill(${p.pid},true)">强杀</button></span></td></tr>`:''}`;
+  }).join('');
+  $('#pcount').textContent=list.length;
+}
+function detail(pid){expanded=expanded===pid?null:pid;render()}
+async function kill(pid,force){
+  if(!confirm(`${force?'强制结束':'退出'}进程 ${pid}？`))return;
+  const r=await fetch('/api/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid,force})}).then(r=>r.json());
+  if(!r.ok)alert(r.error||'失败');setTimeout(tick,400);
+}
+/* ---- 刷新：系统行每 2s，进程表每 4s（服务端进程数据本就 5s 一刷） ---- */
+let _ptick=0;
+async function tick(){
+  try{data=await fetch('/api/stats').then(r=>r.json())}catch(e){return}
+  const s=data.system,g=data.gpus||[];
+  const gpuMax=Math.max(0,...g.map(x=>x.util||0));
+  const gp=g.filter(x=>(x.util||0)>0).map(x=>`${x.name=='独显'?'独':x.name=='核显'?'核':x.name.slice(0,2)}${x.util}`).join('·')||'–';
+  $('#infoline').innerHTML=`CPU<b>${s.cpu}%</b><span class="sep">│</span>内存<b>${(s.memUsed/2**30).toFixed(1)}/${s.memTotal/2**30).toFixed(0)}G</b><span class="sep">│</span>GPU<b>${gpuMax}%</b><span class="sep">│</span>显卡<b>${gp}</b><span class="sep">│</span>网络↓<b>${fmt(data.net.down)}/s</b>↑<b>${fmt(data.net.up)}/s</b>`;
+  applyFans(data.fans||[]);
+  if(_ptick++%2===0||$('#q').value.trim())render();
+}
+async function tickSensors(){
+  try{sensors=(await fetch('/api/sensors').then(r=>r.json())).sensors||[]}catch(e){return}
+  $('#templine').innerHTML=sensors.map(s=>`${s.name.replace(/CPU 附近|附近|主板 1|主板 2|内存条?/g,m=>({'CPU 附近':'CPU','主板 1':'板1','主板 2':'板2','内存':' Mem'}[m]||m))}<b class="${s.value>75?'hot':''}">${s.value}°</b>`).join(' ');
+  const el=$('#fsel');if(el&&!el.options.length)fillOpts();
+}
+tick();setInterval(tick,2000);tickSensors();setInterval(tickSensors,5000);
+</script>
+</body>
+</html>

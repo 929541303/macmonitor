@@ -1,0 +1,19 @@
+# 打包产物与运行时（体积大，读者按 README 自行准备）
+runtime/
+site-pkgs/
+dist/
+.venv/
+__pycache__/
+*.pyc
+
+# 运行时状态
+fan-policy.json
+*.log
+
+# smc 工具为 GPL 项目 smcFanControl 的编译产物，不入库（见 scripts/build-smc.sh）
+bin/smc
+
+# 旧版（已被单进程架构替代）
+menubar.py
+window.py
+start.sh
