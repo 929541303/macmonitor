@@ -20,7 +20,7 @@ from objc import YES, NO
 
 import server
 
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 QR_URL = "https://raw.githubusercontent.com/929541303/macmonitor/main/donate/wechat-qr.png"
 QR_CACHE = Path.home() / "Library/Application Support/MacMonitor/wechat-qr.png"

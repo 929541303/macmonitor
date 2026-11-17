@@ -14,8 +14,9 @@ from Foundation import NSObject
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
 from panel import panel, start_qr_refresher  # 原生 AppKit 面板（替代 WKWebView）
 
-VERSION = "1.3.0"
-CHANGELOG = """v1.3.0  English UI, global release
+VERSION = "1.3.1"
+CHANGELOG = """v1.3.1  Memory: 64→52MB footprint; web UI English
+v1.3.0  English UI, global release
 v1.2.5  瘦身（安装包 40→23MB）；降频优化 CPU 3%
 v1.2.4  更新流程修复：后台线程检查、原生提示框（无多余输入框）
 v1.2.3  安装引导（DMG 直接运行时提示装入应用程序）；更新检查重试
