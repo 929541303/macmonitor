@@ -18,6 +18,10 @@
 
 <img src="screenshots/panel.png" width="560">
 
+**杀死指定程序** — 点击进程行查看详情，可优雅退出或强杀：
+
+<img src="screenshots/kill.png" width="260">
+
 **关于 / 打赏**：
 
 <img src="screenshots/about.png" width="300">

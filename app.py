@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 
 import rumps
-from AppKit import NSAlert
+from AppKit import NSAlert, NSApp
 from Foundation import NSObject
 
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
@@ -243,6 +243,23 @@ def on_main(fn):
 if __name__ == "__main__":
     _maincall = MainCall.alloc().init()
     server.UI_HOOKS["about"] = lambda: on_main(panel.show_about)
+
+    def _demo_kill():
+        # 演示用：挑一个可识别的进程弹详情（不实际结束）
+        plist = server._stats.get("plist") or []
+        prefer = ("WeChat", "Safari", "Chrome", "Firefox", "TextEdit", "Finder", "Music")
+        pick = None
+        for n in prefer:
+            pick = next((p for p in plist if n.lower() in p["name"].lower()), None)
+            if pick:
+                break
+        if not pick:
+            pick = max(plist, key=lambda p: p["cpu"]) if plist else None
+        if pick:
+            panel.show_detail(pick)
+
+    server.UI_HOOKS["kill"] = lambda: on_main(_demo_kill)
+    server.UI_HOOKS["stopmodal"] = lambda: on_main(NSApp.stopModal)
     server.start_embedded(8765)  # 后台线程 + HTTP，同进程
     start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新（成功才换新，失败保留旧图）
     start_update_checker()  # 版本检查：启动 1 分钟后 + 每 24 小时

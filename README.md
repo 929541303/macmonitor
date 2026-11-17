@@ -20,6 +20,10 @@
 
 <img src="screenshots/panel.png" width="560">
 
+**Kill any process** — click a row to inspect it, then quit gracefully or force-kill:
+
+<img src="screenshots/kill.png" width="260">
+
 **About / Tip jar**:
 
 <img src="screenshots/about.png" width="300">
