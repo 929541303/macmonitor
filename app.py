@@ -12,8 +12,9 @@ from Foundation import NSObject
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
 from panel import panel, start_qr_refresher  # 原生 AppKit 面板（替代 WKWebView）
 
-VERSION = "1.2.2"
-CHANGELOG = """v1.2.2  原生面板（弃 WKWebView）；CPU 稳定 <5%
+VERSION = "1.2.3"
+CHANGELOG = """v1.2.3  安装引导（DMG 直接运行时提示装入应用程序）；更新检查重试
+v1.2.2  原生面板（弃 WKWebView）；CPU 稳定 <5%
 v1.2.0  单进程架构（面板/菜单栏/服务合一），图标与菜单栏 🌀 同款
 v1.1.0  棒棒糖图标；About 完善（简介/版本/更新）
 v1.0.0  首版：进程/GPU/网络监控、排序与结束进程；风扇自动/恒定/传感器联动；菜单栏常驻指标"""
