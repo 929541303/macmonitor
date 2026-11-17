@@ -220,17 +220,18 @@ def collect_processes(heavy=True):
         procs.append({
             "pid": pid,
             "name": i.get("name") or "",
-            "status": i.get("status") or "",
             "cpu": round(_procs_cpu_cache.get(pid, 0.0), 1),
             "mem": mem,
             "threads": threads,
             "gpu": round(_gpu_by_pid.get(pid, 0) / 10, 1),  # 1000ms/s = 100%
             "netIn": round(net.get("rate_in", 0.0), 1),
             "netOut": round(net.get("rate_out", 0.0), 1),
-            "bytesIn": net.get("bytes_in", 0),
-            "bytesOut": net.get("bytes_out", 0),
-            "conns": net.get("conns", 0),
         })
+    # 清理已退出进程的缓存，防无限增长
+    alive = {p["pid"] for p in procs}
+    for cache in (_mem_cache, _procs_cpu_cache):
+        for dead in set(cache) - alive:
+            cache.pop(dead, None)
     return procs
 
 

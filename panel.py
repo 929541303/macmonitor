@@ -629,14 +629,21 @@ class Panel:
         threading.Thread(target=work, daemon=True).start()
 
     def show_detail(self, p):
+        # 累计流量/状态按需现查（快照里不再常驻这些字段，省内存）
+        try:
+            status = psutil.Process(p["pid"]).status()
+        except Exception:
+            status = "—"
+        net = server._net_by_pid.get(p["pid"]) or {}
+        io = (net.get("bytes_in", 0), net.get("bytes_out", 0))
         a = NSAlert.alloc().init()
-        a.setMessageText_("%s（PID %d）" % (p["name"], p["pid"]))
+        a.setMessageText_("%s (PID %d)" % (p["name"], p["pid"]))
         a.setInformativeText_(
-            "CPU %.1f%%   GPU %.1f%%   Mem %.0fMB   Threads %d\n"
+            "Status %s   CPU %.1f%%   GPU %.1f%%   Mem %.0fMB   Threads %d\n"
             "Net ↓%s/s ↑%s/s   Total ↓%s ↑%s" % (
-                p["cpu"], p.get("gpu") or 0, p["mem"], p["threads"],
+                status, p["cpu"], p.get("gpu") or 0, p["mem"], p["threads"],
                 fmt(p.get("netIn") or 0), fmt(p.get("netOut") or 0),
-                fmt(p.get("bytesIn") or 0), fmt(p.get("bytesOut") or 0)))
+                fmt(io[0]), fmt(io[1])))
         a.addButtonWithTitle_("Quit Process")
         a.addButtonWithTitle_("Force Kill")
         a.addButtonWithTitle_("Close")
