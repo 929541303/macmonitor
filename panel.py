@@ -20,7 +20,7 @@ from objc import YES, NO
 
 import server
 
-VERSION = "1.2.5"
+VERSION = "1.3.0"
 
 QR_URL = "https://raw.githubusercontent.com/929541303/macmonitor/main/donate/wechat-qr.png"
 QR_CACHE = Path.home() / "Library/Application Support/MacMonitor/wechat-qr.png"
@@ -36,10 +36,10 @@ DAN = (0.890, 0.365, 0.365, 1.0)     # #e35d5d
 F = 11.0
 
 COLS = [  # (key, 标题, 宽)
-    ("pid", "PID", 46), ("name", "进程", 130),
+    ("pid", "PID", 46), ("name", "Process", 130),
     ("cpu", "CPU%", 50), ("gpu", "GPU%", 50),
-    ("net", "网络", 88), ("mem", "内存", 56),
-    ("threads", "线程", 44), ("kill", "·", 24),
+    ("net", "Net", 88), ("mem", "Mem", 56),
+    ("threads", "Threads", 50), ("kill", "·", 24),
 ]
 
 
@@ -265,16 +265,16 @@ class Panel:
         # ── 风扇行（顶部）──
         fan = NSView.alloc().initWithFrame_(NSMakeRect(0, H - 34, W, 34))
         fan.setAutoresizingMask_(2 | 8)  # 宽伸缩 + 顶边距固定
-        fan.addSubview_(label(NSMakeRect(8, 10, 14, 15), "左"))
+        fan.addSubview_(label(NSMakeRect(8, 10, 14, 15), "L"))
         self.rpm_l = label(NSMakeRect(28, 5, 58, 22), "–", TXT, 15)
         fan.addSubview_(self.rpm_l)
-        fan.addSubview_(label(NSMakeRect(100, 10, 14, 15), "右"))
+        fan.addSubview_(label(NSMakeRect(100, 10, 14, 15), "R"))
         self.rpm_r = label(NSMakeRect(120, 5, 58, 22), "–", TXT, 15)
         fan.addSubview_(self.rpm_r)
 
         self.mode_sel = NSPopUpButton.alloc().initWithFrame_pullsDown_(NSMakeRect(186, 6, 78, 22), False)
         self.mode_sel.setFont_(NSFont.systemFontOfSize_(F))
-        for m in ("自动", "恒定", "联动"):
+        for m in ("Auto", "Constant", "Sensor"):
             self.mode_sel.menu().addItemWithTitle_action_keyEquivalent_(m, None, chr(0))
         fan.addSubview_(self.mode_sel)
 
@@ -313,7 +313,7 @@ class Panel:
 
         # ── 工具行 ──
         self.search = NSSearchField.alloc().initWithFrame_(NSMakeRect(8, H - 93, 180, 21))
-        self.search.setPlaceholderString_("搜索进程…")
+        self.search.setPlaceholderString_("Search processes…")
         self.search.setFont_(NSFont.systemFontOfSize_(F - 1))
         self.search_delegate = SearchDelegate.alloc().init()  # 强引用：同上
         self.search.setDelegate_(self.search_delegate)  # 输入即过滤
@@ -394,28 +394,28 @@ class Panel:
             if time.time() > self.cfg_until:
                 mode = "sensor" if any((f.get("policy") or {}).get("mode") == "sensor" for f in fans) \
                     else ("manual" if any(f.get("manual") for f in fans) else "auto")
-                self.mode_sel.selectItemWithTitle_({"sensor": "联动", "manual": "恒定"}.get(mode, "自动"))
+                self.mode_sel.selectItemWithTitle_({"sensor": "Sensor", "manual": "Constant"}.get(mode, "Auto"))
                 pol = next((f["policy"] for f in fans if (f.get("policy") or {}).get("mode") == "sensor"), None)
                 if mode == "manual":
                     rpm = int(sum(f["rpm"] or 0 for f in fans) / len(fans))
-                    self.st.setStringValue_("恒定 %d" % rpm)
+                    self.st.setStringValue_("Constant %d" % rpm)
                     self.slider.setIntegerValue_(rpm)
                     self.sv.setStringValue_("%d rpm" % rpm)
                 elif pol:
-                    self.st.setStringValue_("联动≤%s°" % pol.get("target"))
+                    self.st.setStringValue_("Sensor ≤%s°" % pol.get("target"))
                 else:
-                    self.st.setStringValue_("自动")
+                    self.st.setStringValue_("Auto")
                 self.show_cfg(mode)
         # 温度行
-        short = {"CPU 附近": "CPU", "CPU 核心": "核", "CPU 封装": "封装", "主板 1": "板1",
-                 "主板 2": "板2", "内存": "Mem", "电池": "电池", "电源": "电源"}
+        short = {"CPU Prox": "CPU", "CPU Core": "Core", "CPU Pkg": "Pkg", "Board 1": "Brd1",
+                 "Board 2": "Brd2", "Mem": "Mem", "Battery": "Batt", "Power": "PWR"}
         parts = ["%s %s°" % (short.get(x["name"], x["name"]), round(x["value"]))
                  for x in server.get_sensors()]
-        self.temps.setStringValue_("  ".join(parts) or "无传感器")
+        self.temps.setStringValue_("  ".join(parts) or "No sensors")
         # 信息行
         gpus = sysd.get("gpus") or []
         gmax = max([g.get("util") or 0 for g in gpus], default=0)
-        gp = "·".join("%s%d" % (("独" if g["name"] == "独显" else "核" if g["name"] == "核显" else g["name"][:2]),
+        gp = "·".join("%s%d" % (("d" if g["name"] == "dGPU" else "i" if g["name"] == "iGPU" else g["name"][:2]),
                                 g.get("util") or 0)
                       for g in gpus if (g.get("util") or 0) > 0) or "–"
         net = sysd.get("net") or {}
@@ -447,15 +447,15 @@ class Panel:
         except TypeError:
             rows.sort(key=lambda p: str(p.get(k) or 0), reverse=not self.sort_asc)
         self.rows = rows[:150]
-        self.pcount.setStringValue_("%d 进程" % len(rows))
+        self.pcount.setStringValue_("%d procs" % len(rows))
         self.tv.reloadData()
 
     # ── 交互动作 ──
     def onMode_(self, sender):
         self.cfg_until = time.time() + 3
         m = sender.titleOfSelectedItem()
-        self.show_cfg({"恒定": "manual", "联动": "sensor"}.get(m, "auto"))
-        if m == "自动":
+        self.show_cfg({"Constant": "manual", "Sensor": "sensor"}.get(m, "auto"))
+        if m == "Auto":
             self.fan_set("auto")
         elif m == "恒定":
             self.fan_set("manual", rpm=int(self.slider.value()))
@@ -534,7 +534,7 @@ class Panel:
             NSMakeRect(0, 0, W, H),
             NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskFullSizeContentView,
             NSBackingStoreBuffered, False)
-        win.setTitle_("关于")
+        win.setTitle_("About")
         win.setTitlebarAppearsTransparent_(YES)
         win.setTitleVisibility_(1)  # NSWindowTitleHidden
         win.setMovableByWindowBackground_(YES)
@@ -572,7 +572,7 @@ class Panel:
 
         center(H - 100, 22, "MacMonitor", TXT, 17, 0.6)
         center(H - 120, 16, "v" + VERSION, DIM, 11)
-        center(H - 148, 30, "设备监控 · 风扇自动控温\n仅支持 Intel 机型 · M 系列适配开发中", DIM, 11)
+        center(H - 148, 30, "Device monitoring · Smart fan control\nIntel Macs only · Apple Silicon WIP", DIM, 11)
 
         # 打赏卡片（缓存=GitHub 最新版，捆绑图为兜底）
         qr = QR_CACHE if QR_CACHE.exists() else (server.ROOT / "donate" / "wechat-qr.png")
@@ -590,8 +590,8 @@ class Panel:
                 card.addSubview_(iv)
                 cv.addSubview_(card)
                 self.about_iv = iv
-        center(52, 18, "创作不易 · 赏杯咖啡 ☕️", ACC, 12.5, 0.5)
-        center(30, 14, "微信扫一扫，支持作者继续维护", DIM, 10)
+        center(52, 18, "Buy me a coffee ☕️", ACC, 12.5, 0.5)
+        center(30, 14, "Scan with WeChat to support development", DIM, 10)
 
         self.about_win = win
         win.center()
@@ -632,14 +632,14 @@ class Panel:
         a = NSAlert.alloc().init()
         a.setMessageText_("%s（PID %d）" % (p["name"], p["pid"]))
         a.setInformativeText_(
-            "CPU %.1f%%   GPU %.1f%%   内存 %.0fMB   线程 %d\n"
-            "网 ↓%s/s ↑%s/s   累计 ↓%s ↑%s" % (
+            "CPU %.1f%%   GPU %.1f%%   Mem %.0fMB   Threads %d\n"
+            "Net ↓%s/s ↑%s/s   Total ↓%s ↑%s" % (
                 p["cpu"], p.get("gpu") or 0, p["mem"], p["threads"],
                 fmt(p.get("netIn") or 0), fmt(p.get("netOut") or 0),
                 fmt(p.get("bytesIn") or 0), fmt(p.get("bytesOut") or 0)))
-        a.addButtonWithTitle_("退出进程")
-        a.addButtonWithTitle_("强杀")
-        a.addButtonWithTitle_("关闭")
+        a.addButtonWithTitle_("Quit Process")
+        a.addButtonWithTitle_("Force Kill")
+        a.addButtonWithTitle_("Close")
         r = a.runModal()
         if r == 1000:
             self.kill(p, False)
@@ -654,8 +654,8 @@ class Panel:
             pass
         except psutil.AccessDenied:
             err = NSAlert.alloc().init()
-            err.setMessageText_("权限不足")
-            err.setInformativeText_("系统/他人进程，无法结束")
+            err.setMessageText_("Permission Denied")
+            err.setInformativeText_("System or other user's process — cannot terminate")
             err.addButtonWithTitle_("好")
             err.runModal()
         except Exception:

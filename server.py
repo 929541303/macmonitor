@@ -54,7 +54,7 @@ def get_fans():
         rng = _fan_range_cache.get(i)
         fans.append({
             "index": i,
-            "name": f"风扇 {i}",
+            "name": f"Fan {i}",
             "rpm": smc_read(f"F{i}Ac"),
             "min": rng[0] if rng else 2000,
             "max": rng[1] if rng else 6000,
@@ -65,8 +65,8 @@ def get_fans():
 
 
 SENSOR_KEYS = {
-    "TC0P": "CPU 附近", "TC0D": "CPU 核心", "TC0E": "CPU 封装", "TG0P": "GPU",
-    "Ts0S": "主板 1", "Ts1S": "主板 2", "Tm0P": "内存", "TB1T": "电池", "Tp0P": "电源",
+    "TC0P": "CPU Prox", "TC0D": "CPU Core", "TC0E": "CPU Pkg", "TG0P": "GPU",
+    "Ts0S": "Board 1", "Ts1S": "Board 2", "Tm0P": "Mem", "TB1T": "Battery", "Tp0P": "Power",
 }
 
 _fan_policy = {}  # {index: {"mode": "sensor", "sensor": key, "target": °C}}
@@ -158,7 +158,7 @@ def get_gpus():
             continue
         gpus.append({
             "class": cls.group(1),
-            "name": "核显" if "Intel" in cls.group(1) else ("独显" if "AMD" in cls.group(1) else cls.group(1)),
+            "name": "iGPU" if "Intel" in cls.group(1) else ("dGPU" if "AMD" in cls.group(1) else cls.group(1)),
             "util": util, "vramFree": vfree, "vramInUse": vinuse,
             "temp": temp, "power": power,
         })

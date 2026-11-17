@@ -1,110 +1,107 @@
 # MacMonitor 🌀
 
-**macOS 设备监控 + 风扇自动控温工具**：实时监控 CPU / 内存 / GPU / 网络 / 全部进程，风扇支持恒定转速与传感器联动自动控温。单进程原生界面，常驻 CPU 仅 ~4%。
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-> ⚠️ **当前仅完整支持 Intel 机型（老款 Mac）**；Apple Silicon（M 系列）适配开发中，后续跟进。
+**macOS system monitor + smart fan control in your menu bar.** Real-time CPU / memory / GPU / network and per-process stats, with three fan modes (auto · constant RPM · sensor-linked). Single native process — ~3% CPU, ~76MB RAM.
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Intel](https://img.shields.io/badge/Intel-完整支持-green) ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-开发中-orange) ![CPU](https://img.shields.io/badge/面板CPU-~4%25-9cf)
+> ⚠️ **Fully supports Intel Macs** (macOS 13+). Apple Silicon (M-series) support is in progress.
 
-**搜索关键词**：`mac 监控` `mac 风扇控制` `Mac Monitor` `Fan Control` `macos 系统监控` `温度监控` `进程管理` `菜单栏工具` `activity monitor` `cpu gpu 内存`
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Intel](https://img.shields.io/badge/Intel-fully%20supported-green) ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-in%20progress-orange) ![CPU](https://img.shields.io/badge/idle%20CPU-~3%25-9cf) ![Size](https://img.shields.io/badge/download-23MB-informational)
 
-## 运行截图
+**Keywords**: `mac monitor` `fan control mac` `macos system monitor` `cpu gpu monitor` `process manager` `menu bar app` `temperature monitor` `activity monitor alternative` `smc fan` `intel mac`
 
-**菜单栏常驻指标**（转速 / CPU / 内存 / GPU 一目了然）：
+## Screenshots
+
+**Menu bar, always live** — fan RPM / CPU / memory / GPU at a glance:
 
 <img src="screenshots/menubar.png" width="420">
 
-**监控面板**（风扇控制 / 温度 / 系统指标 / 进程表，表头排序 · 搜索过滤 · 点击行管理进程）：
+**The panel** — fan control, temps, system stats and the process table (sortable columns, live search, click a row to quit / force-kill):
 
 <img src="screenshots/panel.png" width="560">
 
-**关于 / 打赏**（收款码每 6 小时从 GitHub 自动刷新，替换仓库中的 `donate/wechat-qr.png` 即可更新）：
+**About / Tip jar** — the WeChat QR refreshes itself from this repo every 6 hours (replace `donate/wechat-qr.png` to update it everywhere):
 
 <img src="screenshots/about.png" width="300">
 
-## 功能
+## Features
 
-- **进程监控**：全部进程的 CPU / GPU / 网络 / 内存 / 线程，表头点击排序，实时搜索过滤，点行查看详情、退出/强杀进程
-- **系统指标**：CPU、内存、GPU（核显/独显利用率）、网速实时展示
-- **风扇控制**：三种模式
-  - 自动：交还系统控制
-  - 恒定：固定转速（滑杆调节）
-  - 联动：选定传感器 + 目标温度，自动线性调速（目标 -12°C 起步，目标温度约 60% 转速，+6°C 全速）
-- **菜单栏常驻**：🌀转速 CPU% 内存% GPU% 一目了然，点开即完整面板
-- **单进程架构**：菜单栏 + 采集服务 + 原生 AppKit 面板合一，内存 ~60MB
-- **本地采集**：所有数据只在本地，不上传任何信息
+- **Per-process monitoring** — CPU, GPU, network, memory and threads for every process; sort by any column, live search, one-click quit / force kill
+- **System stats** — CPU, memory, GPUs (iGPU/dGPU utilization), network rates
+- **Fan control** — three modes, just like the classics:
+  - `Auto` — hand control back to macOS
+  - `Constant` — fixed RPM (slider)
+  - `Sensor` — pick a sensor + target temperature; RPM ramps linearly from target−12°C, ~60% at target, full speed at +6°C
+- **Menu-bar resident** — click any stat row to open the panel; the panel floats above fullscreen apps
+- **Single process, native UI** — AppKit panel, no Electron, no WebView; ~3% CPU, ~76MB RAM
+- **Auto-update** — checks GitHub Releases daily, one click to download
+- **Privacy** — everything is collected and displayed locally; nothing is uploaded
 
-## 安装使用
+## Install
 
-### 方式一：下载安装包（推荐）
+### Option 1 — Download the DMG (recommended)
 
-从 [Releases](../../releases) 下载 DMG，拖入「应用程序」，右键打开（首次需允许）。
-安装包内置完整 Python 运行时，**无需安装任何依赖**。
+Grab `MacMonitor.dmg` from [Releases](../../releases), open it, and drag MacMonitor onto the **Applications** shortcut. Right-click → Open on first launch (the app is unsigned).
 
-首次运行会请求两次管理员授权：
+First launch asks for two admin permissions:
 
-1. 风扇控制（编译 setuid 的 smc 工具）
-2. 每进程 GPU/网络监控（powermetrics / nettop 免密 sudo）
+1. Fan control (authorizes a setuid `smc` helper)
+2. Per-process GPU/network sampling (passwordless `powermetrics` / `nettop`)
 
-### 方式二：源码运行
+### Option 2 — From source
 
 ```bash
-# 1) 依赖
 pip install -r requirements.txt
 
-# 2) 风扇控制工具（GPL，需自行编译；不装则监控功能正常、风扇只读）
+# Fan control helper (GPL, build it yourself; the app works read-only without it)
 bash scripts/build-smc.sh
 
-# 3) 免密采样（可选，启用每进程 GPU/网络列）
+# Optional: enable per-process GPU/network columns
 sudo sh -c 'echo "$(whoami) ALL=(root) NOPASSWD: /usr/bin/powermetrics, /usr/bin/nettop" > /etc/sudoers.d/resmon && chmod 440 /etc/sudoers.d/resmon'
 
-# 4) 启动
 python app.py
 ```
 
-## 打包自包含 .app / DMG
+## Building a self-contained .app / DMG
 
 ```bash
-# 独立 Python 运行时 + 依赖（目标机器零依赖）
 uv python install 3.12
 cp -r "$(uv python find 3.12)" runtime
 uv pip install --target site-pkgs -r requirements.txt
 cp runtime/bin/python3.12 runtime/bin/MacMonitor
-# 组装 .app（Contents/MacOS/MacMonitor 即 app-launcher.sh）后：
+# assemble the .app (Contents/MacOS/MacMonitor is app-launcher.sh), then:
 hdiutil create -volname MacMonitor -srcfolder dist -ov -format UDBZ MacMonitor.dmg
 ```
 
-## 平台说明
+## Platform notes
 
-| 平台 | 状态 |
+| Platform | Status |
 |---|---|
-| Intel macOS 13+ | ✅ 完整功能 |
-| Apple Silicon (M 系列) | ⚠️ Rosetta 可运行；SMC 温度/风扇键位与 Intel 不同，传感器与风扇控制需按机型适配 |
+| Intel, macOS 13+ | ✅ Fully supported |
+| Apple Silicon | ⚠️ Runs under Rosetta; SMC sensor/fan keys differ — adaptation in progress |
 
-## 目录结构
+## Project layout
 
 ```
-app.py             入口：菜单栏常驻 + 单进程装配
-panel.py           原生 AppKit 面板（风扇控制/温度/进程表）
-server.py          采集后端：进程/GPU/网络/SMC + 内嵌 HTTP API
-app-launcher.sh    .app 启动器（自包含运行时 + 首次授权）
-web/index.html     浏览器版界面（调试用，127.0.0.1:8765）
-scripts/           smc 工具编译脚本
+app.py             entry point: menu-bar app + single-process assembly
+panel.py           native AppKit panel (fan control / temps / process table)
+server.py          backend: process/GPU/network sampling, SMC fan control, local HTTP API
+app-launcher.sh    .app launcher (self-contained runtime + first-run authorization)
+web/index.html     legacy browser UI (debug, 127.0.0.1:8765)
+scripts/           smc helper build script
 ```
 
-## 致谢
+## Credits
 
-- [smcFanControl](https://github.com/hholtmann/smcFanControl) — SMC 读写工具（GPL）
-- [rumps](https://github.com/jaraco/rumps)、[psutil](https://github.com/giampaolo/psutil)、[PyObjC](https://github.com/ronaldoussoren/pyobjc)
+- [smcFanControl](https://github.com/hholtmann/smcFanControl) — the SMC read/write helper (GPL)
+- [rumps](https://github.com/jaraco/rumps) · [psutil](https://github.com/giampaolo/psutil) · [PyObjC](https://github.com/ronaldoussoren/pyobjc)
 
-## 许可
+## License
 
-[MIT](LICENSE)（smc 工具本身遵循上游 GPL，需自行编译，不包含在本仓库）
+[MIT](LICENSE) — the `smc` helper itself is GPL (upstream) and is built separately, not included in this repo.
 
-## 打赏
+## Support the project
 
-如果这个工具帮到了你，可以请作者喝杯咖啡 ☕️
+If MacMonitor helps you, consider buying the author a coffee ☕️ — scan the QR code in the app's About window (or below). The QR refreshes from this repository, so it's always current.
 
-微信打赏：
-
-![微信打赏](donate/wechat-qr.png)
+![WeChat tip](donate/wechat-qr.png)

@@ -14,8 +14,9 @@ from Foundation import NSObject
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
 from panel import panel, start_qr_refresher  # 原生 AppKit 面板（替代 WKWebView）
 
-VERSION = "1.2.5"
-CHANGELOG = """v1.2.5  瘦身（安装包 40→23MB）；降频优化 CPU 3%
+VERSION = "1.3.0"
+CHANGELOG = """v1.3.0  English UI, global release
+v1.2.5  瘦身（安装包 40→23MB）；降频优化 CPU 3%
 v1.2.4  更新流程修复：后台线程检查、原生提示框（无多余输入框）
 v1.2.3  安装引导（DMG 直接运行时提示装入应用程序）；更新检查重试
 v1.2.2  原生面板（弃 WKWebView）；CPU 稳定 <5%
@@ -57,9 +58,9 @@ def _alert(title, msg, ok="好", cancel=None):
 class UpdateAsker(NSObject):
     def ask_(self, info):
         tag, url = info
-        if _alert("发现新版本",
-                  f"MacMonitor v{tag.lstrip('v')} 已发布。\n\n是否现在前往 GitHub 下载更新？",
-                  ok="去下载", cancel="暂不"):
+        if _alert("New Version Available",
+                  f"MacMonitor v{tag.lstrip('v')} is out.\n\nDownload from GitHub now?",
+                  ok="Download", cancel="Later"):
             subprocess.Popen(["open", url])
 
     def result_(self, info):
@@ -67,7 +68,7 @@ class UpdateAsker(NSObject):
         rel, force = info[0], bool(info[1])
         if rel is None:
             if force:
-                _alert("检查更新", "无法连接 GitHub（代理与直连均已尝试）。\n请稍后再试。")
+                _alert("Check for Updates", "Cannot reach GitHub (tried proxy & direct).\nPlease try again later.")
             return
         tag = rel.get("tag_name") or ""
         url = rel.get("html_url") or "https://github.com/929541303/macmonitor/releases"
@@ -80,7 +81,7 @@ class UpdateAsker(NSObject):
             _notified_tag = tag
             self.ask_((tag, dmg))
         elif force:
-            _alert("检查更新", f"已是最新版本（v{VERSION}）。")
+            _alert("Check for Updates", f"You are up to date (v{VERSION}).")
 
 
 def _fetch_release():
@@ -148,21 +149,21 @@ class MonitorApp(rumps.App):
     def __init__(self):
         super().__init__("MacMonitor", quit_button=None)
         self.menu = [
-            "打开完整面板",
+            "Open Panel",
             None,
-            "风扇",
+            "Fan",
             "CPU",
-            "内存",
+            "Memory",
             "GPU",
-            "网络",
+            "Network",
             None,
-            "检查更新…",
-            "退出",
+            "Check for Updates…",
+            "Quit",
         ]
-        self.menu["打开完整面板"].set_callback(lambda _: open_panel())
-        self.menu["检查更新…"].set_callback(lambda _: check_update(force=True))
-        self.menu["退出"].set_callback(lambda _: quit_app())
-        for key in ("风扇", "CPU", "内存", "GPU", "网络"):
+        self.menu["Open Panel"].set_callback(lambda _: open_panel())
+        self.menu["Check for Updates…"].set_callback(lambda _: check_update(force=True))
+        self.menu["Quit"].set_callback(lambda _: quit_app())
+        for key in ("Fan", "CPU", "Memory", "GPU", "Network"):
             self.menu[key].set_callback(lambda _: open_panel())
         self.timer = rumps.Timer(self.tick, 4)
         self.timer.start()
@@ -195,11 +196,11 @@ class MonitorApp(rumps.App):
                 self.title = t
 
             fan_txt = "  /  ".join(
-                f"{f['rpm']:.0f}rpm{('手动' if f.get('manual') else ('联动' if (f.get('policy') or {}).get('mode') == 'sensor' else ''))}"
+                f"{f['rpm']:.0f}rpm{('M' if f.get('manual') else ('S' if (f.get('policy') or {}).get('mode') == 'sensor' else ''))}"
                 for f in fans) or "无数据"
-            self.set("风扇", f"风扇  {fan_txt}")
-            self.set("CPU", f"CPU  {s['cpu']:.0f}%   温度 {d.get('temps', {}).get('cpu') or '-'}°C   负载 {s['load'][0]:.1f}")
-            self.set("内存", f"内存  {s['memUsed'] / 2 ** 30:.1f}/{s['memTotal'] / 2 ** 30:.0f}G   交换 {s['swapUsed'] / 2 ** 30:.1f}G")
+            self.set("Fan", f"Fan  {fan_txt}")
+            self.set("CPU", f"CPU  {s['cpu']:.0f}%   {d.get('temps', {}).get('cpu') or '-'}°C   Load {s['load'][0]:.1f}")
+            self.set("Memory", f"Memory  {s['memUsed'] / 2 ** 30:.1f}/{s['memTotal'] / 2 ** 30:.0f}G   Swap {s['swapUsed'] / 2 ** 30:.1f}G")
             gpus = d.get("gpus") or []
             best = {}
             for g in gpus:
@@ -207,7 +208,7 @@ class MonitorApp(rumps.App):
                 if k not in best or (g.get("util") or 0) > (best[k].get("util") or 0):
                     best[k] = g
             gpu_line = "  ".join(
-                f"{g['name']}{g.get('util')}%" + (f" 显存{g['vramInUse'] / 2 ** 30:.1f}G" if g.get("vramInUse") is not None else "")
+                f"{g['name']}{g.get('util')}%" + (f" VRAM {g['vramInUse'] / 2 ** 30:.1f}G" if g.get("vramInUse") is not None else "")
                 for g in best.values()) or "无数据"
             self.set("GPU", f"GPU  {gpu_line}")
             net = d.get("net") or {}
@@ -215,13 +216,13 @@ class MonitorApp(rumps.App):
             def kb(v):
                 return f"{v / 1000:.0f}K" if v >= 1000 else f"{v:.0f}B"
 
-            self.set("网络", f"网络  ↓{kb(net.get('down', 0))}/s  ↑{kb(net.get('up', 0))}/s")
+            self.set("Network", f"Network  ↓{kb(net.get('down', 0))}/s  ↑{kb(net.get('up', 0))}/s")
         except Exception:
             import traceback
             with open("/tmp/resmon-app.log", "a") as f:
                 f.write(traceback.format_exc() + "\n")
-            self.title = "监控离线"
-            for k in ("风扇", "CPU", "内存", "GPU", "网络"):
+            self.title = "Offline"
+            for k in ("Fan", "CPU", "Memory", "GPU", "Network"):
                 self.set(k, f"{k}  –")
 
 
