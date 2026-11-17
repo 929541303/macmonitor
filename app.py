@@ -120,6 +120,7 @@ class MonitorApp(rumps.App):
 
 if __name__ == "__main__":
     server.start_embedded(8765)  # 后台线程 + HTTP，同进程
+    panel.start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新
     if not os.environ.get("MACMON_HIDE"):  # MACMON_HIDE=1: 仅菜单栏（测试用）
         rumps.Timer(lambda t: (t.stop(), open_panel()), 1.5).start()  # 启动即开面板
     MonitorApp().run()

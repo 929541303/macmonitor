@@ -2,6 +2,8 @@
 """MacMonitor 原生面板（AppKit）：风扇控制 + 温度/信息行 + 进程表
 替代 WKWebView——原生 NSTableView 常驻开销极低（WKWebView 空窗口即 ~8% CPU）。"""
 import time
+import urllib.request
+from pathlib import Path
 
 import psutil
 from AppKit import (
@@ -9,8 +11,9 @@ from AppKit import (
     NSScrollView, NSSearchField, NSSlider, NSTableColumn, NSTableView,
     NSTextField, NSView, NSWindow, NSWindowStyleMaskTitled,
     NSWindowStyleMaskClosable, NSWindowStyleMaskMiniaturizable,
-    NSWindowStyleMaskResizable, NSBackingStoreBuffered, NSMakeRect,
-    NSAppearance,
+    NSWindowStyleMaskResizable, NSWindowStyleMaskFullSizeContentView,
+    NSBackingStoreBuffered, NSMakeRect,
+    NSAppearance, NSImageView, NSButton,
 )
 from Foundation import NSObject, NSRunLoop, NSTimer, NSSortDescriptor
 from objc import YES, NO
@@ -18,6 +21,9 @@ from objc import YES, NO
 import server
 
 VERSION = "1.2.2"
+
+QR_URL = "https://raw.githubusercontent.com/929541303/macmonitor/main/donate/wechat-qr.png"
+QR_CACHE = Path.home() / "Library/Application Support/MacMonitor/wechat-qr.png"
 
 # 配色（与网页版一致）
 BG = (0.067, 0.075, 0.094, 1.0)      # #111318
@@ -127,6 +133,50 @@ class PanelTable(NSObject):
             panel.sort_k = sd.key()
             panel.sort_asc = bool(sd.ascending())
             panel.refresh_table()
+
+
+class QRUpdater(NSObject):
+    """下载完成后回主线程刷新 About 里的二维码"""
+
+    def apply_(self, path):
+        panel.reload_qr(str(path))
+
+
+def _fetch_qr():
+    """从 GitHub 拉最新收款码；有变化才写缓存，返回新路径"""
+    try:
+        req = urllib.request.Request(QR_URL)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = r.read()
+        if not data.startswith(b"\x89PNG") or len(data) < 500:
+            return None
+        old = QR_CACHE.read_bytes() if QR_CACHE.exists() else b""
+        if data == old:
+            return None
+        QR_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        QR_CACHE.write_bytes(data)
+        return str(QR_CACHE)
+    except Exception:
+        return None
+
+
+def _qr_loop():
+    while True:
+        time.sleep(20 if not QR_CACHE.exists() else 5)
+        p = _fetch_qr()
+        if p:
+            _qr_updater.performSelectorOnMainThread_withObject_waitUntilDone_("apply:", p, False)
+        time.sleep(6 * 3600)  # 每 6 小时检查一次
+
+
+_qr_updater = None
+
+
+def start_qr_refresher():
+    global _qr_updater
+    import threading
+    _qr_updater = QRUpdater.alloc().init()
+    threading.Thread(target=_qr_loop, daemon=True).start()
 
 
 class PanelWinDelegate(NSObject):
@@ -465,19 +515,88 @@ class Panel:
         self.refresh_table()
 
     def onAbout_(self, sender):
-        a = NSAlert.alloc().init()
-        a.setMessageText_("MacMonitor & Fans Control  v" + VERSION)
-        a.setInformativeText_(
-            "实时监控 CPU、内存、GPU、网络与全部进程，支持按任意指标排序并一键结束进程；"
-            "风扇支持自动 / 恒定转速 / 传感器联动三种模式。\n\n"
-            "所有数据仅在本地采集与展示，不上传任何信息。")
-        icon = server.ROOT / "icon.icns"
-        if icon.exists():
-            img = NSImage.alloc().initWithContentsOfFile_(str(icon))
+        self.show_about()
+
+    def reload_qr(self, path):
+        iv = getattr(self, "about_iv", None)
+        if iv is not None and self.about_win is not None and self.about_win.isVisible():
+            img = NSImage.alloc().initWithContentsOfFile_(path)
             if img:
-                a.setIcon_(img)
-        a.addButtonWithTitle_("好")
-        a.runModal()
+                iv.setImage_(img)
+
+    def show_about(self):
+        if getattr(self, "about_win", None):
+            NSApp.activateIgnoringOtherApps_(True)
+            self.about_win.makeKeyAndOrderFront_(None)
+            return
+        W, H = 300, 436
+        win = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
+            NSMakeRect(0, 0, W, H),
+            NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskFullSizeContentView,
+            NSBackingStoreBuffered, False)
+        win.setTitle_("关于")
+        win.setTitlebarAppearsTransparent_(YES)
+        win.setTitleVisibility_(1)  # NSWindowTitleHidden
+        win.setMovableByWindowBackground_(YES)
+        win.setLevel_(3)
+        win.setBackgroundColor_(c(*BG))
+        win.setAppearance_(NSAppearance.appearanceNamed_("NSAppearanceNameVibrantDark"))
+        win.setReleasedWhenClosed_(NO)
+        win.setDelegate_(self.win_delegate)
+        cv = win.contentView()
+        cv.setWantsLayer_(YES)
+
+        # App 图标
+        icon_path = server.ROOT / "icon.png"
+        if not icon_path.exists():
+            icon_path = server.ROOT / "icon.icns"
+        ic = NSImageView.alloc().initWithFrame_(NSMakeRect(W / 2 - 36, H - 78, 72, 72))
+        if icon_path.exists():
+            im = NSImage.alloc().initWithContentsOfFile_(str(icon_path))
+            if im:
+                ic.setImage_(im)
+        ic.setImageScaling_(3)
+        cv.addSubview_(ic)
+
+        def center(y, h, text, color, size, weight=0):
+            t = NSTextField.labelWithString_(text)
+            t.setFont_(NSFont.systemFontOfSize_weight_(size, weight))
+            t.setTextColor_(c(*color))
+            t.setBackgroundColor_(c(0, 0, 0, 0))
+            t.setEditable_(NO)
+            t.setSelectable_(NO)
+            t.setAlignment_(1)
+            t.setFrame_(NSMakeRect(16, y, W - 32, h))
+            cv.addSubview_(t)
+            return t
+
+        center(H - 100, 22, "MacMonitor", TXT, 17, 0.6)
+        center(H - 120, 16, "v" + VERSION, DIM, 11)
+        center(H - 148, 30, "进程 / GPU / 网络监控 · 风扇三模式控温\n数据仅在本地，不上传", DIM, 11)
+
+        # 打赏卡片（缓存=GitHub 最新版，捆绑图为兜底）
+        qr = QR_CACHE if QR_CACHE.exists() else (server.ROOT / "donate" / "wechat-qr.png")
+        if qr.exists():
+            qimg = NSImage.alloc().initWithContentsOfFile_(str(qr))
+            if qimg:
+                card = NSView.alloc().initWithFrame_(NSMakeRect(W / 2 - 92, 88, 184, 184))
+                card.setWantsLayer_(YES)
+                card.layer().setBackgroundColor_(c(1, 1, 1, 1).CGColor())
+                card.layer().setCornerRadius_(14.0)
+                card.layer().setMasksToBounds_(YES)
+                iv = NSImageView.alloc().initWithFrame_(NSMakeRect(9, 9, 166, 166))
+                iv.setImage_(qimg)
+                iv.setImageScaling_(3)
+                card.addSubview_(iv)
+                cv.addSubview_(card)
+                self.about_iv = iv
+        center(52, 18, "创作不易 · 赏杯咖啡 ☕️", ACC, 12.5, 0.5)
+        center(30, 14, "微信扫一扫，支持作者继续维护", DIM, 10)
+
+        self.about_win = win
+        win.center()
+        NSApp.activateIgnoringOtherApps_(True)
+        win.makeKeyAndOrderFront_(None)
 
     def show_cfg(self, mode):
         self.slider.setHidden_(mode != "manual")
