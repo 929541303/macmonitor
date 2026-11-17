@@ -304,10 +304,10 @@ class Panel:
         content.addSubview_(fan)
 
         # ── 温度行 / 信息行 ──
-        self.temps = label(NSMakeRect(10, H - 52, W - 20, 15), "温度加载中…")
+        self.temps = label(NSMakeRect(10, H - 52, W - 20, 15), "Loading temps…")
         self.temps.setAutoresizingMask_(2 | 8)
         content.addSubview_(self.temps)
-        self.info = label(NSMakeRect(10, H - 68, W - 20, 15), "加载中…")
+        self.info = label(NSMakeRect(10, H - 68, W - 20, 15), "Loading…")
         self.info.setAutoresizingMask_(2 | 8)
         content.addSubview_(self.info)
 
@@ -420,7 +420,7 @@ class Panel:
                       for g in gpus if (g.get("util") or 0) > 0) or "–"
         net = sysd.get("net") or {}
         self.info.setStringValue_(
-            "CPU %d%%   内存 %.1f/%.0fG   GPU %d%% (%s)   网 ↓%s/s ↑%s/s" % (
+            "CPU %d%%   Mem %.1f/%.0fG   GPU %d%% (%s)   Net ↓%s/s ↑%s/s" % (
                 round(s["cpu"]), s["memUsed"] / 2 ** 30, s["memTotal"] / 2 ** 30,
                 round(gmax), gp, fmt(net.get("down") or 0), fmt(net.get("up") or 0)))
         # 进程表：仅当新快照到达
@@ -457,7 +457,7 @@ class Panel:
         self.show_cfg({"Constant": "manual", "Sensor": "sensor"}.get(m, "auto"))
         if m == "Auto":
             self.fan_set("auto")
-        elif m == "恒定":
+        elif m == "Constant":
             self.fan_set("manual", rpm=int(self.slider.value()))
         else:
             self.fill_sensors()
@@ -663,7 +663,7 @@ class Panel:
             err = NSAlert.alloc().init()
             err.setMessageText_("Permission Denied")
             err.setInformativeText_("System or other user's process — cannot terminate")
-            err.addButtonWithTitle_("好")
+            err.addButtonWithTitle_("OK")
             err.runModal()
         except Exception:
             pass

@@ -45,7 +45,7 @@ def _ver_tuple(v):
         return (0,)
 
 
-def _alert(title, msg, ok="好", cancel=None):
+def _alert(title, msg, ok="OK", cancel=None):
     """原生提示框（无输入框）"""
     a = NSAlert.alloc().init()
     a.setMessageText_(title)
@@ -198,7 +198,7 @@ class MonitorApp(rumps.App):
 
             fan_txt = "  /  ".join(
                 f"{f['rpm']:.0f}rpm{('M' if f.get('manual') else ('S' if (f.get('policy') or {}).get('mode') == 'sensor' else ''))}"
-                for f in fans) or "无数据"
+                for f in fans) or "No data"
             self.set("Fan", f"Fan  {fan_txt}")
             self.set("CPU", f"CPU  {s['cpu']:.0f}%   {d.get('temps', {}).get('cpu') or '-'}°C   Load {s['load'][0]:.1f}")
             self.set("Memory", f"Memory  {s['memUsed'] / 2 ** 30:.1f}/{s['memTotal'] / 2 ** 30:.0f}G   Swap {s['swapUsed'] / 2 ** 30:.1f}G")
@@ -210,7 +210,7 @@ class MonitorApp(rumps.App):
                     best[k] = g
             gpu_line = "  ".join(
                 f"{g['name']}{g.get('util')}%" + (f" VRAM {g['vramInUse'] / 2 ** 30:.1f}G" if g.get("vramInUse") is not None else "")
-                for g in best.values()) or "无数据"
+                for g in best.values()) or "No data"
             self.set("GPU", f"GPU  {gpu_line}")
             net = d.get("net") or {}
 

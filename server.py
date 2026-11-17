@@ -104,7 +104,7 @@ def set_fan(index, mode, rpm=None, sensor=None, target=None):
     global _fan_policy
     index = int(index)
     if index < 0 or index >= FAN_COUNT:
-        raise ValueError("风扇编号无效")
+        raise ValueError("invalid fan index")
     rng = _fan_range_cache.get(index) or (smc_read(f"F{index}Mn"), smc_read(f"F{index}Mx"))
     if not rng or not rng[0]:
         rng = _fan_range_cache[index] = (2000, 6000)
@@ -114,7 +114,7 @@ def set_fan(index, mode, rpm=None, sensor=None, target=None):
         ok1 = smc_write(f"F{index}Md", "01")
         ok2 = smc_write(f"F{index}Tg", rpm_to_hex(rpm))
         if not (ok1 and ok2):
-            raise PermissionError(f"写入失败(mode={ok1},rpm={ok2})，SMC 写入需要 root 权限")
+            raise PermissionError(f"write failed (mode={ok1},rpm={ok2}); SMC writes require root")
         _fan_policy.pop(index, None); save_policy()
     elif mode == "sensor":
         pol = {"mode": "sensor", "sensor": sensor or "TC0P", "target": int(target or 70)}
@@ -442,11 +442,11 @@ class Handler(BaseHTTPRequestHandler):
                 p = psutil.Process(pid)
                 p.kill() if force else p.terminate()
                 return self._json({"ok": True, "pid": pid, "force": force,
-                                   "msg": "已强制结束" if force else "已发送退出请求"})
+                                   "msg": "force killed" if force else "quit signal sent"})
             except psutil.NoSuchProcess:
-                return self._json({"ok": True, "msg": "进程已不存在"})
+                return self._json({"ok": True, "msg": "process already gone"})
             except psutil.AccessDenied:
-                return self._json({"ok": False, "error": "权限不足：系统/他人进程，无法结束"}, 403)
+                return self._json({"ok": False, "error": "permission denied: system or other user's process"}, 403)
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)}, 400)
         if self.path == "/api/fan":
@@ -486,5 +486,5 @@ if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
     for t in (monitor_loop, poll_gpu, poll_net):
         threading.Thread(target=t, daemon=True).start()
-    print(f"资源监控面板: http://127.0.0.1:{port}")
+    print(f"MacMonitor: http://127.0.0.1:{port}")
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
