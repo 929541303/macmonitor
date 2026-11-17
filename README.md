@@ -20,13 +20,14 @@
 
 <img src="screenshots/panel.png" width="560">
 
-**About / Tip jar** — the WeChat QR refreshes itself from this repo every 6 hours (replace `donate/wechat-qr.png` to update it everywhere):
+**About / Tip jar**:
 
 <img src="screenshots/about.png" width="300">
 
 ## Features
 
-- **Per-process monitoring** — CPU, GPU, network, memory and threads for every process; sort by any column, live search, one-click quit / force kill
+- **Per-process monitoring** — CPU, GPU, network, memory and threads for every process; sort by any column, live search
+- **Force quit any app** — click a row to inspect a process, then quit it gracefully or force-kill it instantly
 - **System stats** — CPU, memory, GPUs (iGPU/dGPU utilization), network rates
 - **Fan control** — three modes, just like the classics:
   - `Auto` — hand control back to macOS
@@ -102,6 +103,6 @@ scripts/           smc helper build script
 
 ## Support the project
 
-If MacMonitor helps you, consider buying the author a coffee ☕️ — scan the QR code in the app's About window (or below). The QR refreshes from this repository, so it's always current.
+If MacMonitor helps you, consider buying the author a coffee ☕️ — scan the QR code in the app's About window (or below).
 
 ![WeChat tip](donate/wechat-qr.png)
