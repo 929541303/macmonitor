@@ -2,10 +2,12 @@
 """MacMonitor 单进程版：菜单栏 + 监控服务 + 面板窗口 三合一（同 Macs Fan Control）"""
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
 
 import rumps
+from Foundation import NSObject
 
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
 from panel import panel, start_qr_refresher  # 原生 AppKit 面板（替代 WKWebView）
@@ -23,6 +25,74 @@ _panel = {}  # win/web/委托 全局引用，防 GC
 def open_panel():
     """显示监控面板窗口（原生 AppKit，首次创建后复用）"""
     panel.build()
+
+
+RELEASE_API = "https://api.github.com/repos/929541303/macmonitor/releases/latest"
+_notified_tag = None
+
+
+def _ver_tuple(v):
+    try:
+        return tuple(int(x) for x in v.strip().lstrip("vV").split("."))
+    except ValueError:
+        return (0,)
+
+
+class UpdateAsker(NSObject):
+    def ask_(self, info):
+        tag, url = info
+        w = rumps.Window(
+            title="发现新版本",
+            message=f"MacMonitor v{tag.lstrip('v')} 已发布。\n\n是否前往 GitHub 下载更新？",
+            ok="去下载", cancel="暂不", dimensions=(320, 120))
+        if w.run().clicked:
+            subprocess.Popen(["open", url])
+
+
+def check_update(force=False):
+    """查 GitHub Release 最新版；force=手动检查（总是弹结果）"""
+    global _notified_tag
+    try:
+        req = urllib.request.Request(RELEASE_API, headers={"User-Agent": "MacMonitor"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            rel = json.load(r)
+        tag = rel.get("tag_name") or ""
+        url = rel.get("html_url") or f"https://github.com/929541303/macmonitor/releases"
+        dmg = next((a["browser_download_url"] for a in rel.get("assets", [])
+                    if a["name"].lower().endswith(".dmg")), url)
+    except Exception:
+        if force:
+            rumps.Window(title="检查更新", message="无法连接 GitHub，请稍后再试。",
+                         ok="好", dimensions=(300, 90)).run()
+        return
+    newer = _ver_tuple(tag) > _ver_tuple(VERSION)
+    if newer:
+        if _notified_tag == tag and not force:
+            return
+        _notified_tag = tag
+        _asker.performSelectorOnMainThread_withObject_waitUntilDone_(
+            "ask:", (tag, dmg), False)
+    elif force:
+        rumps.Window(title="检查更新", message=f"已是最新版本（v{VERSION}）。",
+                     ok="好", dimensions=(300, 90)).run()
+
+
+def _update_loop():
+    import time as _t
+    _t.sleep(60)
+    while True:
+        check_update()
+        _t.sleep(24 * 3600)
+
+
+_asker = None
+
+
+def start_update_checker():
+    global _asker
+    import threading
+    _asker = UpdateAsker.alloc().init()
+    threading.Thread(target=_update_loop, daemon=True).start()
 
 
 def quit_app():
@@ -51,9 +121,11 @@ class MonitorApp(rumps.App):
             "GPU",
             "网络",
             None,
+            "检查更新…",
             "退出",
         ]
         self.menu["打开完整面板"].set_callback(lambda _: open_panel())
+        self.menu["检查更新…"].set_callback(lambda _: check_update(force=True))
         self.menu["退出"].set_callback(lambda _: quit_app())
         for key in ("风扇", "CPU", "内存", "GPU", "网络"):
             self.menu[key].set_callback(lambda _: open_panel())
@@ -121,6 +193,7 @@ class MonitorApp(rumps.App):
 if __name__ == "__main__":
     server.start_embedded(8765)  # 后台线程 + HTTP，同进程
     start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新（成功才换新，失败保留旧图）
+    start_update_checker()  # 版本检查：启动 1 分钟后 + 每 24 小时
     if not os.environ.get("MACMON_HIDE"):  # MACMON_HIDE=1: 仅菜单栏（测试用）
         rumps.Timer(lambda t: (t.stop(), open_panel()), 1.5).start()  # 启动即开面板
     MonitorApp().run()
