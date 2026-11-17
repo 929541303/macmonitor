@@ -49,6 +49,29 @@ class UpdateAsker(NSObject):
         if w.run().clicked:
             subprocess.Popen(["open", url])
 
+    def result_(self, info):
+        """检查完成（主线程）：按结果弹窗"""
+        rel, force = info[0], bool(info[1])
+        if rel is None:
+            if force:
+                rumps.Window(title="检查更新",
+                             message="无法连接 GitHub（代理与直连均已尝试）。\n请稍后再试。",
+                             ok="好", dimensions=(320, 110)).run()
+            return
+        tag = rel.get("tag_name") or ""
+        url = rel.get("html_url") or "https://github.com/929541303/macmonitor/releases"
+        dmg = next((a["browser_download_url"] for a in rel.get("assets", [])
+                    if a["name"].lower().endswith(".dmg")), url)
+        global _notified_tag
+        if _ver_tuple(tag) > _ver_tuple(VERSION):
+            if _notified_tag == tag and not force:
+                return
+            _notified_tag = tag
+            self.ask_((tag, dmg))
+        elif force:
+            rumps.Window(title="检查更新", message=f"已是最新版本（v{VERSION}）。",
+                         ok="好", dimensions=(300, 90)).run()
+
 
 def _fetch_release():
     """代理/直连交替重试 4 次，抗网络抖动"""
@@ -67,28 +90,16 @@ def _fetch_release():
 
 
 def check_update(force=False):
-    """查 GitHub Release 最新版；force=手动检查（总是弹结果）"""
-    global _notified_tag
-    rel = _fetch_release()
-    if rel is None:
-        if force:
-            rumps.Window(title="检查更新", message="无法连接 GitHub，请稍后再试。\n（也可检查系统代理是否可用）",
-                         ok="好", dimensions=(320, 110)).run()
-        return
-    tag = rel.get("tag_name") or ""
-    url = rel.get("html_url") or f"https://github.com/929541303/macmonitor/releases"
-    dmg = next((a["browser_download_url"] for a in rel.get("assets", [])
-                if a["name"].lower().endswith(".dmg")), url)
-    newer = _ver_tuple(tag) > _ver_tuple(VERSION)
-    if newer:
-        if _notified_tag == tag and not force:
-            return
-        _notified_tag = tag
-        _asker.performSelectorOnMainThread_withObject_waitUntilDone_(
-            "ask:", (tag, dmg), False)
-    elif force:
-        rumps.Window(title="检查更新", message=f"已是最新版本（v{VERSION}）。",
-                     ok="好", dimensions=(300, 90)).run()
+    """查 GitHub Release 最新版；后台线程拉取（不卡界面），结果回主线程弹窗"""
+    import threading
+
+    def work():
+        rel = _fetch_release()
+        if _asker:
+            _asker.performSelectorOnMainThread_withObject_waitUntilDone_(
+                "result:", (rel, bool(force)), False)
+
+    threading.Thread(target=work, daemon=True).start()
 
 
 def _update_loop():
