@@ -14,8 +14,9 @@ from Foundation import NSObject
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
 from panel import panel, start_qr_refresher  # 原生 AppKit 面板（替代 WKWebView）
 
-VERSION = "1.3.1"
-CHANGELOG = """v1.3.1  Memory: 64→52MB footprint; web UI English
+VERSION = "1.3.2"
+CHANGELOG = """v1.3.2  Housekeeping release
+v1.3.1  Memory: 64→52MB footprint; web UI English
 v1.3.0  English UI, global release
 v1.2.5  瘦身（安装包 40→23MB）；降频优化 CPU 3%
 v1.2.4  更新流程修复：后台线程检查、原生提示框（无多余输入框）
@@ -260,6 +261,9 @@ if __name__ == "__main__":
 
     server.UI_HOOKS["kill"] = lambda: on_main(_demo_kill)
     server.UI_HOOKS["stopmodal"] = lambda: on_main(NSApp.stopModal)
+    server.UI_HOOKS["hidepanel"] = lambda: on_main(
+        lambda: panel.win.orderOut_(None) if panel.win else None)
+    server.UI_HOOKS["showpanel"] = lambda: on_main(panel.build)
     server.start_embedded(8765)  # 后台线程 + HTTP，同进程
     start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新（成功才换新，失败保留旧图）
     start_update_checker()  # 版本检查：启动 1 分钟后 + 每 24 小时
