@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**macOS system monitor + smart fan control in your menu bar.** Real-time CPU / memory / GPU / network and per-process stats, with three fan modes (auto · constant RPM · sensor-linked). Single native process — ~3% CPU, ~76MB RAM.
+**macOS system monitor + smart fan control in your menu bar.** Real-time CPU / memory / GPU / network stats, kill any process you choose, and three fan modes (auto · constant RPM · sensor-linked). Single native process — ~3% CPU.
 
 > ⚠️ **Fully supports Intel Macs** (macOS 13+). Apple Silicon (M-series) support is in progress.
 
