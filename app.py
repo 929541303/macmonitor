@@ -50,21 +50,27 @@ class UpdateAsker(NSObject):
 
 
 def check_update(force=False):
-    """查 GitHub Release 最新版；force=手动检查（总是弹结果）"""
+    """查 GitHub Release 最新版；force=手动检查（总是弹结果）。自动走系统代理+重试"""
     global _notified_tag
-    try:
-        req = urllib.request.Request(RELEASE_API, headers={"User-Agent": "MacMonitor"})
-        with urllib.request.urlopen(req, timeout=15) as r:
-            rel = json.load(r)
-        tag = rel.get("tag_name") or ""
-        url = rel.get("html_url") or f"https://github.com/929541303/macmonitor/releases"
-        dmg = next((a["browser_download_url"] for a in rel.get("assets", [])
-                    if a["name"].lower().endswith(".dmg")), url)
-    except Exception:
+    rel = None
+    for _ in range(3):  # 网络抖动重试
+        try:
+            req = urllib.request.Request(RELEASE_API, headers={"User-Agent": "MacMonitor"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                rel = json.load(r)
+            break
+        except Exception:
+            import time as _t
+            _t.sleep(2)
+    if rel is None:
         if force:
-            rumps.Window(title="检查更新", message="无法连接 GitHub，请稍后再试。",
-                         ok="好", dimensions=(300, 90)).run()
+            rumps.Window(title="检查更新", message="无法连接 GitHub，请稍后再试。\n（也可检查系统代理是否可用）",
+                         ok="好", dimensions=(320, 110)).run()
         return
+    tag = rel.get("tag_name") or ""
+    url = rel.get("html_url") or f"https://github.com/929541303/macmonitor/releases"
+    dmg = next((a["browser_download_url"] for a in rel.get("assets", [])
+                if a["name"].lower().endswith(".dmg")), url)
     newer = _ver_tuple(tag) > _ver_tuple(VERSION)
     if newer:
         if _notified_tag == tag and not force:

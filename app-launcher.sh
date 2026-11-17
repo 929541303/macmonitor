@@ -1,6 +1,21 @@
 #!/bin/bash
 # MacMonitor 启动器：完全自包含（内置 Python 运行时+依赖，无需网络/系统 Python）
 DIR="$(cd "$(dirname "$0")/../Resources/resmon" && pwd)"
+
+# 从 DMG/挂载卷直接运行：引导安装到 /Applications
+case "$DIR" in
+/Volumes/*)
+  APP_ROOT="$(cd "$DIR/../../.." && pwd)"
+  R=$(osascript -e 'display dialog "MacMonitor 还未安装到「应用程序」。\n\n是否现在安装并运行？" buttons {"安装并运行", "直接运行"} default button 1 with icon note' 2>/dev/null | awk -F: '/button/{print $NF}')
+  if [ "$R" = "安装并运行" ]; then
+    rm -rf /Applications/MacMonitor.app 2>/dev/null
+    if cp -R "$APP_ROOT" /Applications/ 2>/dev/null; then
+      open /Applications/MacMonitor.app
+      exit 0
+    fi
+  fi
+  ;;
+esac
 cd "$DIR"
 export PYTHONHOME="$DIR/runtime"
 export PYTHONPATH="$DIR/site-pkgs"
