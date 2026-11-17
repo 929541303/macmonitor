@@ -162,7 +162,7 @@ def _fetch_qr():
 
 def _qr_loop():
     while True:
-        time.sleep(20 if not QR_CACHE.exists() else 5)
+        time.sleep(5 if not QR_CACHE.exists() else 20)  # 无缓存时更快取一次
         p = _fetch_qr()
         if p:
             _qr_updater.performSelectorOnMainThread_withObject_waitUntilDone_("apply:", p, False)

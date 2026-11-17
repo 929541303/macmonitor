@@ -8,7 +8,7 @@ from pathlib import Path
 import rumps
 
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
-from panel import panel  # 原生 AppKit 面板（替代 WKWebView）
+from panel import panel, start_qr_refresher  # 原生 AppKit 面板（替代 WKWebView）
 
 VERSION = "1.2.2"
 CHANGELOG = """v1.2.2  原生面板（弃 WKWebView）；CPU 稳定 <5%
@@ -120,7 +120,7 @@ class MonitorApp(rumps.App):
 
 if __name__ == "__main__":
     server.start_embedded(8765)  # 后台线程 + HTTP，同进程
-    panel.start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新
+    start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新（成功才换新，失败保留旧图）
     if not os.environ.get("MACMON_HIDE"):  # MACMON_HIDE=1: 仅菜单栏（测试用）
         rumps.Timer(lambda t: (t.stop(), open_panel()), 1.5).start()  # 启动即开面板
     MonitorApp().run()
