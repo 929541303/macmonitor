@@ -225,7 +225,22 @@ class MonitorApp(rumps.App):
                 self.set(k, f"{k}  –")
 
 
+class MainCall(NSObject):
+    def call_(self, fn):
+        fn()
+
+
+_maincall = None
+
+
+def on_main(fn):
+    if _maincall:
+        _maincall.performSelectorOnMainThread_withObject_waitUntilDone_("call:", fn, False)
+
+
 if __name__ == "__main__":
+    _maincall = MainCall.alloc().init()
+    server.UI_HOOKS["about"] = lambda: on_main(panel.show_about)
     server.start_embedded(8765)  # 后台线程 + HTTP，同进程
     start_qr_refresher()  # 收款码每 6h 从 GitHub 刷新（成功才换新，失败保留旧图）
     start_update_checker()  # 版本检查：启动 1 分钟后 + 每 24 小时

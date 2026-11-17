@@ -310,6 +310,8 @@ def poll_gpu():
         time.sleep(8)
 
 
+UI_HOOKS = {}  # 本地调试钩子（如打开关于窗口），仅监听 127.0.0.1
+
 _stats = {"full_b": b"", "light_b": b"", "ts": 0.0, "sys_d": None, "plist": None, "ts_p": 0.0}
 
 
@@ -392,6 +394,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(body)
             else:
                 self._json(_build_stats())  # 兜底：快照线程未就绪时现算
+        elif self.path.startswith("/api/ui/"):
+            fn = UI_HOOKS.get(self.path.split("/api/ui/")[1])
+            if fn:
+                fn()
+                return self._json({"ok": True})
+            return self._json({"error": "no hook"}, 404)
         elif self.path.startswith("/api/sensors"):
             self._json({"sensors": get_sensors()})
         elif self.path.startswith("/api/proc/"):

@@ -8,6 +8,20 @@
 
 **搜索关键词**：`mac 监控` `mac 风扇控制` `Mac Monitor` `Fan Control` `macos 系统监控` `温度监控` `进程管理` `菜单栏工具` `activity monitor` `cpu gpu 内存`
 
+## 运行截图
+
+**菜单栏常驻指标**（转速 / CPU / 内存 / GPU 一目了然）：
+
+<img src="screenshots/menubar.png" width="420">
+
+**监控面板**（风扇控制 / 温度 / 系统指标 / 进程表，表头排序 · 搜索过滤 · 点击行管理进程）：
+
+<img src="screenshots/panel.png" width="560">
+
+**关于 / 打赏**（收款码每 6 小时从 GitHub 自动刷新，替换仓库中的 `donate/wechat-qr.png` 即可更新）：
+
+<img src="screenshots/about.png" width="300">
+
 ## 功能
 
 - **进程监控**：全部进程的 CPU / GPU / 网络 / 内存 / 线程，表头点击排序，实时搜索过滤，点行查看详情、退出/强杀进程
