@@ -374,7 +374,7 @@ class Panel:
         win.center()
         self.timer = PanelTimer.alloc().init()
         NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-            3.0, self.timer, "tick:", None, True)
+            4.0, self.timer, "tick:", None, True)
         NSApp.setActivationPolicy_(0)  # Regular：窗口可压到最前
         NSApp.activateIgnoringOtherApps_(True)
         win.makeKeyAndOrderFront_(None)

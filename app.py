@@ -163,7 +163,7 @@ class MonitorApp(rumps.App):
         self.menu["退出"].set_callback(lambda _: quit_app())
         for key in ("风扇", "CPU", "内存", "GPU", "网络"):
             self.menu[key].set_callback(lambda _: open_panel())
-        self.timer = rumps.Timer(self.tick, 3)
+        self.timer = rumps.Timer(self.tick, 4)
         self.timer.start()
 
     _last_titles = {}

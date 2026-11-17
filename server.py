@@ -134,7 +134,7 @@ _gpus_cache = {"ts": 0.0, "data": []}
 
 
 def get_gpus():
-    if time.time() - _gpus_cache["ts"] < 8:  # GPU 利用率变化慢
+    if time.time() - _gpus_cache["ts"] < 12:  # GPU 利用率变化慢
         return _gpus_cache["data"]
     try:
         out = subprocess.run(["ioreg", "-r", "-d", "1", "-c", "IOAccelerator"],
@@ -351,7 +351,7 @@ def monitor_loop():
                 _stats["sys_d"] = sysd
                 _stats["light_b"] = json.dumps(sysd, ensure_ascii=False).encode()
                 last["sys"] = t0
-            if t0 - last["plist"] >= 6.0:
+            if t0 - last["plist"] >= 7.0:
                 poll_cpu_once()
                 plist = collect_processes(True)
                 _stats["plist"] = plist
