@@ -8,6 +8,7 @@ import urllib.request
 from pathlib import Path
 
 import rumps
+from AppKit import NSAlert
 from Foundation import NSObject
 
 import server  # 后端：进程/CPU/GPU/网络/风扇 + 内嵌 HTTP(127.0.0.1:8765)
@@ -40,24 +41,31 @@ def _ver_tuple(v):
         return (0,)
 
 
+def _alert(title, msg, ok="好", cancel=None):
+    """原生提示框（无输入框）"""
+    a = NSAlert.alloc().init()
+    a.setMessageText_(title)
+    a.setInformativeText_(msg)
+    a.addButtonWithTitle_(ok)
+    if cancel:
+        a.addButtonWithTitle_(cancel)
+    return a.runModal() == 1000  # 第一个按钮
+
+
 class UpdateAsker(NSObject):
     def ask_(self, info):
         tag, url = info
-        w = rumps.Window(
-            title="发现新版本",
-            message=f"MacMonitor v{tag.lstrip('v')} 已发布。\n\n是否前往 GitHub 下载更新？",
-            ok="去下载", cancel="暂不", dimensions=(320, 120))
-        if w.run().clicked:
+        if _alert("发现新版本",
+                  f"MacMonitor v{tag.lstrip('v')} 已发布。\n\n是否现在前往 GitHub 下载更新？",
+                  ok="去下载", cancel="暂不"):
             subprocess.Popen(["open", url])
 
     def result_(self, info):
-        """检查完成（主线程）：按结果弹窗"""
+        """检查完成（主线程）：按结果弹窗（原生，无输入框）"""
         rel, force = info[0], bool(info[1])
         if rel is None:
             if force:
-                rumps.Window(title="检查更新",
-                             message="无法连接 GitHub（代理与直连均已尝试）。\n请稍后再试。",
-                             ok="好", dimensions=(320, 110)).run()
+                _alert("检查更新", "无法连接 GitHub（代理与直连均已尝试）。\n请稍后再试。")
             return
         tag = rel.get("tag_name") or ""
         url = rel.get("html_url") or "https://github.com/929541303/macmonitor/releases"
@@ -70,8 +78,7 @@ class UpdateAsker(NSObject):
             _notified_tag = tag
             self.ask_((tag, dmg))
         elif force:
-            rumps.Window(title="检查更新", message=f"已是最新版本（v{VERSION}）。",
-                         ok="好", dimensions=(300, 90)).run()
+            _alert("检查更新", f"已是最新版本（v{VERSION}）。")
 
 
 def _fetch_release():
