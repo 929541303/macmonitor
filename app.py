@@ -50,19 +50,26 @@ class UpdateAsker(NSObject):
             subprocess.Popen(["open", url])
 
 
-def check_update(force=False):
-    """查 GitHub Release 最新版；force=手动检查（总是弹结果）。自动走系统代理+重试"""
-    global _notified_tag
-    rel = None
-    for _ in range(3):  # 网络抖动重试
+def _fetch_release():
+    """代理/直连交替重试 4 次，抗网络抖动"""
+    openers = [
+        urllib.request.build_opener(),  # 系统代理
+        urllib.request.build_opener(urllib.request.ProxyHandler({})),  # 直连兜底
+    ]
+    for attempt in range(4):
         try:
             req = urllib.request.Request(RELEASE_API, headers={"User-Agent": "MacMonitor"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                rel = json.load(r)
-            break
+            with openers[attempt % 2].open(req, timeout=25) as r:
+                return json.load(r)
         except Exception:
-            import time as _t
-            _t.sleep(2)
+            time.sleep(2.5)
+    return None
+
+
+def check_update(force=False):
+    """查 GitHub Release 最新版；force=手动检查（总是弹结果）"""
+    global _notified_tag
+    rel = _fetch_release()
     if rel is None:
         if force:
             rumps.Window(title="检查更新", message="无法连接 GitHub，请稍后再试。\n（也可检查系统代理是否可用）",
